@@ -51,12 +51,16 @@ P0003,Spencer Strider,460,SP
 
 - `recommend` or `r [n]`: show top recommendations
 - `mine <id|name>`: record your pick
-- `other <id|name>`: record another team's pick
+- `other <id|name>`: record another team's pick (off-list names are allowed)
 - `run <n>`: auto-remove `n` best available players as opponents' picks
 - `state`: show draft status and remaining active-slot needs
 - `undo [n]`: undo last `n` picks (default `1`)
 - `find <text>`: search available players
 - `quit`: exit
+
+If an opponent drafts a player not in your loaded pool, enter their name with
+`other <name>`. The draft pick order advances, but no player is removed from your
+modeled pool.
 
 ## Notes
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Literal, Tuple
 
 HITTER_POSITIONS = {"C", "1B", "2B", "3B", "SS", "OF", "DH"}
 PITCHER_POSITIONS = {"SP", "RP"}
@@ -92,6 +92,14 @@ def default_roster_config() -> RosterConfig:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class DraftEvent:
+    side: Literal["my", "other"]
+    player_id: str | None
+    label: str
+    from_pool: bool
+
+
 @dataclass(slots=True)
 class DraftState:
     players: Dict[str, Player]
@@ -101,7 +109,7 @@ class DraftState:
     current_pick_number: int = 0
     my_picks: List[str] = field(default_factory=list)
     other_picks: List[str] = field(default_factory=list)
-    history: List[Tuple[str, str]] = field(default_factory=list)
+    history: List[DraftEvent] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not 1 <= self.draft_slot <= self.league_size:
@@ -129,24 +137,53 @@ class DraftState:
         self._validate_available(player_id)
         self.my_picks.append(player_id)
         self.current_pick_number += 1
-        self.history.append(("my", player_id))
+        player = self.players[player_id]
+        self.history.append(
+            DraftEvent(
+                side="my",
+                player_id=player_id,
+                label=f"{player.player_id} {player.name}",
+                from_pool=True,
+            )
+        )
 
     def record_other_pick(self, player_id: str) -> None:
         self._validate_available(player_id)
         self.other_picks.append(player_id)
         self.current_pick_number += 1
-        self.history.append(("other", player_id))
+        player = self.players[player_id]
+        self.history.append(
+            DraftEvent(
+                side="other",
+                player_id=player_id,
+                label=f"{player.player_id} {player.name}",
+                from_pool=True,
+            )
+        )
 
-    def undo_last_pick(self) -> Tuple[str, str] | None:
+    def record_other_external_pick(self, label: str) -> None:
+        cleaned = label.strip() or "Unknown player"
+        self.current_pick_number += 1
+        self.history.append(
+            DraftEvent(
+                side="other",
+                player_id=None,
+                label=cleaned,
+                from_pool=False,
+            )
+        )
+
+    def undo_last_pick(self) -> DraftEvent | None:
         if not self.history:
             return None
-        side, player_id = self.history.pop()
-        if side == "my":
-            self.my_picks.remove(player_id)
-        else:
-            self.other_picks.remove(player_id)
+        event = self.history.pop()
+        if event.from_pool and event.player_id is not None:
+            if event.side == "my":
+                self.my_picks.remove(event.player_id)
+            else:
+                self.other_picks.remove(event.player_id)
         self.current_pick_number -= 1
-        return side, player_id
+        return event
 
     def my_pick_numbers(self) -> List[int]:
         picks: List[int] = []

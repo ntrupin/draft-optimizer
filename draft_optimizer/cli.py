@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import shlex
-from typing import Dict, List, Sequence
+from typing import Dict, List, Literal, Sequence
 
 from .data import generate_fake_players, load_players_from_csv
 from .models import DraftState, Player, default_roster_config
@@ -13,13 +13,20 @@ def _format_positions(positions: Sequence[str]) -> str:
     return "/".join(positions)
 
 
-def _resolve_player(query: str, players: Dict[str, Player], available_ids: set[str]) -> Player | None:
+ResolveStatus = Literal["found", "ambiguous", "not_found"]
+
+
+def _resolve_player(
+    query: str,
+    players: Dict[str, Player],
+    available_ids: set[str],
+) -> tuple[Player | None, ResolveStatus]:
     q = query.strip()
     if not q:
-        return None
+        return None, "not_found"
 
     if q in players and q in available_ids:
-        return players[q]
+        return players[q], "found"
 
     lowered = q.lower()
     exact_name = [
@@ -28,7 +35,7 @@ def _resolve_player(query: str, players: Dict[str, Player], available_ids: set[s
         if player_id in available_ids and player.name.lower() == lowered
     ]
     if exact_name:
-        return exact_name[0]
+        return exact_name[0], "found"
 
     partials: List[Player] = []
     for player_id in available_ids:
@@ -37,7 +44,7 @@ def _resolve_player(query: str, players: Dict[str, Player], available_ids: set[s
             partials.append(player)
     partials.sort(key=lambda player: player.projected_points, reverse=True)
     if len(partials) == 1:
-        return partials[0]
+        return partials[0], "found"
     if partials:
         print("Ambiguous match. Top candidates:")
         for player in partials[:5]:
@@ -45,7 +52,8 @@ def _resolve_player(query: str, players: Dict[str, Player], available_ids: set[s
                 f"  {player.player_id:>6}  {player.name:<16}  "
                 f"{player.projected_points:>6.1f}  {_format_positions(player.positions)}"
             )
-    return None
+        return None, "ambiguous"
+    return None, "not_found"
 
 
 def _print_recommendations(optimizer: DraftOptimizer, top_n: int) -> None:
@@ -194,7 +202,7 @@ def main() -> None:
             f"(trials={args.mc_trials}, temp={args.mc_temperature}, pool={args.mc_candidate_pool})"
         )
     print("Commands: recommend|r [n], mine|m <id|name>, other|o <id|name>,")
-    print("          run <n>, state, undo, find <text>, help, quit")
+    print("          run <n>, state, undo [n], find <text>, help, quit")
     _print_state(state, optimizer)
     _print_recommendations(optimizer, args.top_n)
 
@@ -217,7 +225,7 @@ def main() -> None:
         if command in {"help", "h", "?"}:
             print("recommend|r [n]     Show top recommendations")
             print("mine|m <query>      Record your pick")
-            print("other|o <query>     Record another team's pick")
+            print("other|o <query>     Record another team's pick (off-list allowed)")
             print("run <n>             Auto-remove n best available as other picks")
             print("state               Show draft status")
             print("undo [n]            Undo last n recorded picks (default: 1)")
@@ -249,9 +257,11 @@ def main() -> None:
                 undone = state.undo_last_pick()
                 if undone is None:
                     break
-                side, player_id = undone
-                player = state.players[player_id]
-                print(f"Undid {side} pick: {player.player_id} {player.name}")
+                if undone.from_pool and undone.player_id is not None:
+                    player = state.players[undone.player_id]
+                    print(f"Undid {undone.side} pick: {player.player_id} {player.name}")
+                else:
+                    print(f"Undid {undone.side} external pick: {undone.label}")
                 undone_total += 1
 
             if undone_total == 0:
@@ -275,19 +285,26 @@ def main() -> None:
                 print(f"Usage: {command} <id|name>")
                 continue
             query = " ".join(parts[1:])
-            player = _resolve_player(query, players=state.players, available_ids=state.available_ids)
-            if player is None:
-                print("No unique available player match found.")
-                continue
+            player, status = _resolve_player(query, players=state.players, available_ids=state.available_ids)
             if command in {"mine", "m"}:
+                if status != "found" or player is None:
+                    print("No unique available player match found.")
+                    continue
                 if state.my_picks_remaining <= 0:
                     print("You have no remaining picks.")
                     continue
                 state.record_my_pick(player.player_id)
                 print(f"My pick: {player.player_id} {player.name} ({player.projected_points:.1f})")
             else:
-                state.record_other_pick(player.player_id)
-                print(f"Other pick: {player.player_id} {player.name} ({player.projected_points:.1f})")
+                if status == "found" and player is not None:
+                    state.record_other_pick(player.player_id)
+                    print(f"Other pick: {player.player_id} {player.name} ({player.projected_points:.1f})")
+                elif status == "ambiguous":
+                    print("No unique available player match found.")
+                    continue
+                else:
+                    state.record_other_external_pick(query)
+                    print(f"Other pick (off-list): {query}")
             _print_recommendations(optimizer, args.top_n)
             continue
 

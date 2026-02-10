@@ -157,9 +157,10 @@ class DraftOptimizer:
         team_picks: Dict[int, List[str]] = {
             team: [] for team in range(1, self.state.league_size + 1)
         }
-        for pick_number, (_, player_id) in enumerate(self.state.history, start=1):
+        for pick_number, event in enumerate(self.state.history, start=1):
             team = self.state.team_for_pick_number(pick_number)
-            team_picks[team].append(player_id)
+            if event.from_pool and event.player_id is not None:
+                team_picks[team].append(event.player_id)
         return team_picks
 
     def _top_available_candidates(
