@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "draft-optimizer"
+version = "0.1.0"
+description = "Live draft optimizer for fantasy baseball"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+data = [
+  "numpy>=1.26",
+  "pandas>=2.0",
+]
+torch = [
+  "torch>=2.2",
+]
+all = [
+  "numpy>=1.26",
+  "pandas>=2.0",
+  "torch>=2.2",
+]
+
+[project.scripts]
+draft-optimize = "draft_optimizer.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["draft_optimizer*"]
