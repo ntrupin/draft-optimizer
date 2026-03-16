@@ -18,7 +18,6 @@
     applySettingsButton: document.getElementById("apply-settings"),
     csvFileInput: document.getElementById("csv-file"),
     draftShell: document.getElementById("draft-shell"),
-    emptyState: document.getElementById("empty-state"),
     externalForm: document.getElementById("external-form"),
     externalLabel: document.getElementById("external-label"),
     historyList: document.getElementById("history-list"),
@@ -549,7 +548,6 @@
     elements.sourceLabel.textContent = state.sourceName || "No CSV loaded";
     const hasPlayers = state.players.length > 0;
     elements.actionPanel.hidden = !hasPlayers;
-    elements.emptyState.hidden = hasPlayers;
     elements.draftShell.hidden = !hasPlayers || !snapshot;
 
     if (!hasPlayers) {
