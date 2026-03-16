@@ -244,19 +244,20 @@
     const summary = snapshot.summary;
     const needs = summary.active_needs || {};
     const needsText = Object.keys(needs).length
-      ? Object.entries(needs)
+      ? `Needs: ${Object.entries(needs)
           .map(([slot, count]) => `${slot}:${count}`)
-          .join("  ")
-      : "Active lineup can be filled with your current roster.";
-    elements.needsSummary.textContent = needsText;
+          .join("  ")}`
+      : "Active lineup can already be filled with your current roster.";
+    const turnText = summary.my_turn
+      ? "Your turn now."
+      : `Picks until your next turn: ${summary.picks_until_my_next_turn_after_current}.`;
+    elements.needsSummary.textContent = `${turnText} ${needsText}`;
 
     const cards = [
       ["Overall Pick", summary.current_pick_number],
       ["My Picks", `${summary.my_picks_count}/${summary.total_roster_size}`],
       ["Available", summary.available_count],
-      ["My Turn", summary.my_turn ? "Yes" : "No"],
       ["Next Turn Gap", summary.picks_until_my_next_turn_after_current],
-      ["Reserve Slots", summary.reserve_slots],
     ];
     elements.summaryCards.innerHTML = cards
       .map(
@@ -279,7 +280,7 @@
     if (!recommendations.length) {
       elements.recommendationsBody.innerHTML = `
         <tr>
-          <td colspan="8" class="empty-row">No feasible recommendations available.</td>
+          <td colspan="6" class="empty-row">No feasible recommendations available.</td>
         </tr>
       `;
       return;
@@ -296,8 +297,6 @@
             <td>${escapeHtml(formatNumber(rec.projected_points))}</td>
             <td>${escapeHtml(formatNumber(rec.score))}</td>
             <td>${escapeHtml(rec.suggested_slot)}</td>
-            <td>${escapeHtml(formatNumber(rec.replacement_at_next_pick))}</td>
-            <td>${escapeHtml(formatNumber(rec.scarcity_dropoff))}</td>
             <td>${actionButtons(rec.player_id)}</td>
           </tr>
         `,
@@ -321,8 +320,8 @@
         player.name.toLowerCase().includes(query) || player.player_id.toLowerCase().includes(query)
       );
     });
-    const visiblePlayers = players.slice(0, 20);
-    elements.searchCount.textContent = `Showing ${visiblePlayers.length} of ${players.length} available`;
+    const visiblePlayers = players.slice(0, 12);
+    elements.searchCount.textContent = `${visiblePlayers.length} shown of ${players.length}`;
 
     if (!visiblePlayers.length) {
       elements.searchResultsBody.innerHTML = `

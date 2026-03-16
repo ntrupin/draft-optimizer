@@ -15,24 +15,15 @@
       data-storage-key="baseball-draft-session-v1"
       data-upload-url="{{ url_for('.api_upload') }}"
     >
-      <header class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">Private Draft Console</p>
-          <h1>Fantasy Baseball Draft Assistant</h1>
-          <p class="hero-text">
-            Upload projections, keep the session in this browser, and let the server recompute
-            recommendations without storing your draft in a database.
-          </p>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Private Draft Tool</p>
+          <h1>Fantasy Baseball Draft</h1>
+          <p class="topbar-text">Upload a CSV, track picks, and keep the draft saved in this browser.</p>
         </div>
-        <div class="hero-meta">
-          <div class="meta-card">
-            <span class="meta-label">Storage</span>
-            <strong>Browser local storage</strong>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Server role</span>
-            <strong>CSV validation and optimizer compute</strong>
-          </div>
+        <div class="source-chip">
+          <span class="source-chip-label">Current CSV</span>
+          <strong id="source-label">No CSV loaded</strong>
         </div>
       </header>
 
@@ -43,9 +34,9 @@
           <div class="panel-heading">
             <div>
               <p class="panel-kicker">Setup</p>
-              <h2>Projection File</h2>
+              <h2>Draft Setup</h2>
             </div>
-            <p id="source-label" class="panel-note">No CSV loaded</p>
+            <p class="panel-note">Saved locally in this browser</p>
           </div>
 
           <form id="upload-form" class="stack">
@@ -53,63 +44,71 @@
               <span>Upload CSV</span>
               <input id="csv-file" name="csv_file" type="file" accept=".csv,text/csv">
             </label>
-            <button class="primary-button" type="submit">Load Projections</button>
+            <button class="primary-button" type="submit">Load CSV</button>
           </form>
 
           <div class="divider"></div>
 
-          <div class="panel-heading compact">
-            <div>
-              <p class="panel-kicker">Settings</p>
-              <h2>Draft Configuration</h2>
+          <form id="settings-form" class="stack">
+            <div class="panel-heading compact">
+              <div>
+                <p class="panel-kicker">Settings</p>
+                <h2>Draft Configuration</h2>
+              </div>
             </div>
-          </div>
 
-          <form id="settings-form" class="settings-grid">
-            <label class="field">
-              <span>Teams</span>
-              <input id="teams" name="teams" type="number" min="2" step="1">
-            </label>
-            <label class="field">
-              <span>Draft Slot</span>
-              <input id="draft-slot" name="draft_slot" type="number" min="1" step="1">
-            </label>
-            <label class="field">
-              <span>Recommendations</span>
-              <input id="top-n" name="top_n" type="number" min="1" step="1">
-            </label>
-            <label class="field checkbox-field">
-              <span>Deterministic Mode</span>
-              <input id="disable-mc" name="disable_mc" type="checkbox">
-            </label>
-            <label class="field">
-              <span>Monte Carlo Trials</span>
-              <input id="mc-trials" name="mc_trials" type="number" min="1" step="1">
-            </label>
-            <label class="field">
-              <span>MC Candidate Pool</span>
-              <input id="mc-candidate-pool" name="mc_candidate_pool" type="number" min="8" step="1">
-            </label>
-            <label class="field">
-              <span>MC Temperature</span>
-              <input id="mc-temperature" name="mc_temperature" type="number" min="0" step="0.1">
-            </label>
-            <label class="field">
-              <span>Need Bonus</span>
-              <input id="opponent-need-bonus" name="opponent_need_bonus" type="number" min="0" step="0.1">
-            </label>
-            <label class="field">
-              <span>Scarcity Weight</span>
-              <input id="opponent-scarcity-weight" name="opponent_scarcity_weight" type="number" min="0" step="0.01">
-            </label>
-            <label class="field">
-              <span>MC Seed</span>
-              <input id="mc-seed" name="mc_seed" type="number" step="1">
-            </label>
+            <div class="settings-grid quick-settings">
+              <label class="field">
+                <span>Teams</span>
+                <input id="teams" name="teams" type="number" min="2" step="1">
+              </label>
+              <label class="field">
+                <span>Draft Slot</span>
+                <input id="draft-slot" name="draft_slot" type="number" min="1" step="1">
+              </label>
+              <label class="field">
+                <span>Recommendations</span>
+                <input id="top-n" name="top_n" type="number" min="1" step="1">
+              </label>
+              <label class="field checkbox-field">
+                <span>Deterministic Mode</span>
+                <input id="disable-mc" name="disable_mc" type="checkbox">
+              </label>
+            </div>
+
+            <details class="advanced-settings">
+              <summary>Advanced Monte Carlo Settings</summary>
+              <div class="settings-grid advanced-grid">
+                <label class="field">
+                  <span>Monte Carlo Trials</span>
+                  <input id="mc-trials" name="mc_trials" type="number" min="1" step="1">
+                </label>
+                <label class="field">
+                  <span>MC Candidate Pool</span>
+                  <input id="mc-candidate-pool" name="mc_candidate_pool" type="number" min="8" step="1">
+                </label>
+                <label class="field">
+                  <span>MC Temperature</span>
+                  <input id="mc-temperature" name="mc_temperature" type="number" min="0" step="0.1">
+                </label>
+                <label class="field">
+                  <span>Need Bonus</span>
+                  <input id="opponent-need-bonus" name="opponent_need_bonus" type="number" min="0" step="0.1">
+                </label>
+                <label class="field">
+                  <span>Scarcity Weight</span>
+                  <input id="opponent-scarcity-weight" name="opponent_scarcity_weight" type="number" min="0" step="0.01">
+                </label>
+                <label class="field">
+                  <span>MC Seed</span>
+                  <input id="mc-seed" name="mc_seed" type="number" step="1">
+                </label>
+              </div>
+            </details>
           </form>
 
           <div class="button-row">
-            <button id="apply-settings" class="secondary-button" type="button">Refresh Recommendations</button>
+            <button id="apply-settings" class="secondary-button" type="button">Refresh</button>
             <button id="restart-draft" class="ghost-button" type="button">Restart Draft</button>
             <button id="reset-tool" class="ghost-button danger" type="button">Reset Tool</button>
           </div>
@@ -120,32 +119,34 @@
             <div class="panel-heading compact">
               <div>
                 <p class="panel-kicker">Actions</p>
-                <h2>Draft Controls</h2>
+                <h2>Quick Actions</h2>
               </div>
             </div>
 
-            <form id="run-form" class="inline-form">
-              <label class="field small-field">
-                <span>Auto-remove</span>
-                <input id="run-count" name="count" type="number" min="1" step="1" value="1">
-              </label>
-              <button class="secondary-button" type="submit">Run Opponent Picks</button>
-            </form>
+            <div class="action-grid">
+              <form id="run-form" class="inline-form compact-form">
+                <label class="field small-field">
+                  <span>Auto-remove</span>
+                  <input id="run-count" name="count" type="number" min="1" step="1" value="1">
+                </label>
+                <button class="secondary-button" type="submit">Run</button>
+              </form>
 
-            <form id="undo-form" class="inline-form">
-              <label class="field small-field">
-                <span>Undo Count</span>
-                <input id="undo-count" name="count" type="number" min="1" step="1" value="1">
-              </label>
-              <button class="secondary-button" type="submit">Undo Picks</button>
-            </form>
+              <form id="undo-form" class="inline-form compact-form">
+                <label class="field small-field">
+                  <span>Undo Count</span>
+                  <input id="undo-count" name="count" type="number" min="1" step="1" value="1">
+                </label>
+                <button class="secondary-button" type="submit">Undo</button>
+              </form>
+            </div>
 
             <form id="external-form" class="stack">
               <label class="field">
                 <span>Opponent Off-List Pick</span>
                 <input id="external-label" name="label" type="text" placeholder="Type any name not in the pool">
               </label>
-              <button class="secondary-button" type="submit">Record Off-List Pick</button>
+              <button class="secondary-button" type="submit">Record Pick</button>
             </form>
           </section>
         </section>
@@ -153,10 +154,10 @@
         <section class="workspace">
           <div id="empty-state" class="panel empty-panel">
             <p class="panel-kicker">Ready</p>
-            <h2>Upload a projection file to start a draft.</h2>
+            <h2>Upload a projection file to start.</h2>
             <p>
-              The session will stay in this browser across refreshes. Restart clears the pick history.
-              Reset clears everything, including the uploaded player pool.
+              The draft stays saved in this browser across refreshes. Restart clears picks only.
+              Reset clears the whole tool, including the uploaded player pool.
             </p>
           </div>
 
@@ -164,12 +165,12 @@
             <section class="panel summary-panel">
               <div class="panel-heading">
                 <div>
-                  <p class="panel-kicker">Snapshot</p>
-                  <h2>Draft State</h2>
+                  <p class="panel-kicker">Overview</p>
+                  <h2>Draft Snapshot</h2>
                 </div>
-                <p id="needs-summary" class="panel-note">No active needs yet</p>
               </div>
               <div id="summary-cards" class="summary-cards"></div>
+              <p id="needs-summary" class="summary-line">No active needs yet</p>
             </section>
 
             <section class="two-column">
@@ -189,8 +190,6 @@
                         <th>Pts</th>
                         <th>Score</th>
                         <th>Slot</th>
-                        <th>Rep Next</th>
-                        <th>Drop</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -203,8 +202,8 @@
                 <section class="panel search-panel">
                   <div class="panel-heading">
                     <div>
-                      <p class="panel-kicker">Player Search</p>
-                      <h2>Available Pool</h2>
+                      <p class="panel-kicker">Search</p>
+                      <h2>Available Players</h2>
                     </div>
                     <p id="search-count" class="panel-note"></p>
                   </div>
@@ -230,7 +229,7 @@
                 <section class="panel roster-panel">
                   <div class="panel-heading">
                     <div>
-                      <p class="panel-kicker">Your Team</p>
+                      <p class="panel-kicker">My Team</p>
                       <h2>My Picks</h2>
                     </div>
                     <p id="my-picks-count" class="panel-note"></p>
@@ -241,8 +240,8 @@
                 <section class="panel history-panel">
                   <div class="panel-heading">
                     <div>
-                      <p class="panel-kicker">Timeline</p>
-                      <h2>Recent Picks</h2>
+                      <p class="panel-kicker">Recent Activity</p>
+                      <h2>Pick History</h2>
                     </div>
                   </div>
                   <ul id="history-list" class="history-list"></ul>
