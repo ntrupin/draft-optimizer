@@ -14,6 +14,7 @@ dependencies = []
 data = [
   "numpy>=1.26",
   "pandas>=2.0",
+  "flask>=3.1.0",
 ]
 torch = [
   "torch>=2.2",
@@ -22,6 +23,7 @@ all = [
   "numpy>=1.26",
   "pandas>=2.0",
   "torch>=2.2",
+  "flask>=3.1.0",
 ]
 
 [project.scripts]
@@ -29,3 +31,10 @@ draft-optimize = "draft_optimizer.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["draft_optimizer*"]
+
+[tool.setuptools.package-data]
+draft_optimizer = [
+  "web/templates/*/*.html",
+  "web/static/*/*.css",
+  "web/static/*/*.js",
+]

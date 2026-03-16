@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import io
 import random
 from pathlib import Path
 from typing import Dict, List, Sequence
@@ -14,6 +15,28 @@ except Exception:
 
 HITTER_CORE_POSITIONS = ("C", "1B", "2B", "3B", "SS", "OF")
 HITTER_POSITION_WEIGHTS = (0.1, 0.12, 0.12, 0.12, 0.12, 0.42)
+CSV_COLUMN_ALIASES = {
+    "player_id": ("playerid", "player_id", "id"),
+    "name": ("name", "player", "playername", "player_name"),
+    "projected_points": (
+        "projectedpoints",
+        "projected_points",
+        "projection",
+        "projected",
+        "proj",
+        "points",
+        "fantasypoints",
+        "fantasy_points",
+    ),
+    "positions": (
+        "positions",
+        "position",
+        "postion",
+        "eligiblepositions",
+        "eligible_positions",
+        "pos",
+    ),
+}
 
 HITTER_MEAN_POINTS = {
     "C": 330.0,
@@ -110,34 +133,120 @@ def _parse_positions(raw_positions: str) -> Sequence[str]:
     return [token.strip() for token in normalized.split(separators[0]) if token.strip()]
 
 
+def _normalize_fieldname(fieldname: str) -> str:
+    return "".join(char for char in fieldname.strip().lower() if char.isalnum())
+
+
+def _resolve_csv_columns(fieldnames: Sequence[str] | None) -> Dict[str, str]:
+    available = {
+        _normalize_fieldname(fieldname): fieldname for fieldname in (fieldnames or []) if fieldname
+    }
+    columns: Dict[str, str] = {}
+    for canonical_name, aliases in CSV_COLUMN_ALIASES.items():
+        for alias in aliases:
+            source_name = available.get(alias)
+            if source_name is not None:
+                columns[canonical_name] = source_name
+                break
+
+    required = {"name", "projected_points", "positions"}
+    if not required.issubset(columns):
+        raise ValueError(
+            "CSV must contain columns equivalent to name, projected_points, and positions. "
+            "Optional column: player_id."
+        )
+
+    return columns
+
+
+def _merge_player_key(raw_player_id: str, name: str, raw_points: str) -> tuple[str, str, str]:
+    if raw_player_id:
+        return ("player_id", raw_player_id, "")
+    return ("name_projection", name.strip().casefold(), raw_points.strip())
+
+
+def _next_generated_player_id(reserved_ids: set[str], sequence_number: int) -> tuple[str, int]:
+    next_sequence_number = sequence_number
+    while True:
+        candidate = f"P{next_sequence_number:04d}"
+        next_sequence_number += 1
+        if candidate not in reserved_ids:
+            return candidate, next_sequence_number
+
+
+def _same_player_name(left: str, right: str) -> bool:
+    return left.strip().casefold() == right.strip().casefold()
+
+
+def _load_players_from_reader(reader: csv.DictReader) -> Dict[str, Player]:
+    merged_rows: Dict[tuple[str, str, str], Dict[str, object]] = {}
+    merge_order: List[tuple[str, str, str]] = []
+    columns = _resolve_csv_columns(reader.fieldnames)
+
+    for idx, row in enumerate(reader, start=1):
+        raw_id = (row.get(columns.get("player_id", "")) or "").strip()
+        name = (row.get(columns["name"]) or "").strip() or f"Player_{idx:03d}"
+        raw_points = (row.get(columns["projected_points"]) or "").strip()
+        points = float(raw_points)
+        positions = normalize_positions(_parse_positions(row.get(columns["positions"], "")))
+
+        merge_key = _merge_player_key(raw_id, name, raw_points)
+        existing = merged_rows.get(merge_key)
+        if existing is None:
+            merged_rows[merge_key] = {
+                "raw_id": raw_id,
+                "name": name,
+                "projected_points": points,
+                "positions": list(positions),
+            }
+            merge_order.append(merge_key)
+            continue
+
+        if raw_id and not _same_player_name(str(existing["name"]), name):
+            raise ValueError(f"Conflicting names for player_id {raw_id}: {existing['name']} vs {name}")
+        if abs(float(existing["projected_points"]) - points) > 1e-9:
+            raise ValueError(
+                f"Conflicting projected_points for {name}: "
+                f"{existing['projected_points']} vs {points}"
+            )
+        existing_positions = list(existing["positions"])
+        existing["positions"] = list(normalize_positions(existing_positions + list(positions)))
+
+    reserved_ids = {
+        entry["raw_id"] for entry in merged_rows.values() if isinstance(entry.get("raw_id"), str) and entry["raw_id"]
+    }
+    players: Dict[str, Player] = {}
+    next_generated_id = 1
+    for merge_key in merge_order:
+        entry = merged_rows[merge_key]
+        raw_id = str(entry["raw_id"])
+        if raw_id:
+            player_id = raw_id
+        else:
+            player_id, next_generated_id = _next_generated_player_id(reserved_ids, next_generated_id)
+            reserved_ids.add(player_id)
+
+        players[player_id] = Player(
+            player_id=player_id,
+            name=str(entry["name"]),
+            projected_points=float(entry["projected_points"]),
+            positions=normalize_positions(entry["positions"]),
+        )
+
+    return players
+
+
 def load_players_from_csv(path: str | Path) -> Dict[str, Player]:
     csv_path = Path(path)
     if not csv_path.exists():
         raise FileNotFoundError(path)
 
-    players: Dict[str, Player] = {}
     with csv_path.open("r", newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
-        required = {"name", "projected_points", "positions"}
-        if not required.issubset(set(reader.fieldnames or [])):
-            raise ValueError(
-                "CSV must contain columns: name, projected_points, positions. "
-                "Optional column: player_id."
-            )
+        return _load_players_from_reader(reader)
 
-        for idx, row in enumerate(reader, start=1):
-            raw_id = (row.get("player_id") or "").strip()
-            player_id = raw_id or f"P{idx:04d}"
-            if player_id in players:
-                player_id = f"{player_id}_{idx}"
-            name = (row.get("name") or "").strip() or f"Player_{idx:03d}"
-            points = float(row["projected_points"])
-            positions = normalize_positions(_parse_positions(row["positions"]))
-            players[player_id] = Player(
-                player_id=player_id,
-                name=name,
-                projected_points=points,
-                positions=positions,
-            )
 
-    return players
+def load_players_from_csv_text(csv_text: str) -> Dict[str, Player]:
+    handle = io.StringIO(csv_text.lstrip("\ufeff"))
+    reader = csv.DictReader(handle)
+    return _load_players_from_reader(reader)

@@ -36,7 +36,9 @@ CSV columns:
 
 - Required: `name`, `projected_points`, `positions`
 - Optional: `player_id`
+- Common header aliases are accepted, including `Player`, `PROJ`, and `Postion`
 - `positions` can be delimited with `/`, `,`, `|`, or `;`
+- If the same player appears on multiple rows to represent multiple eligible positions, those rows are merged during load
 
 Example:
 
@@ -46,6 +48,35 @@ P0001,Ronald Acuna Jr,510,OF
 P0002,Mookie Betts,488,2B/OF
 P0003,Spencer Strider,460,SP
 ```
+
+## Flask Blueprint
+
+The project now includes a stateless Flask blueprint for hosting the draft tool as
+an isolated web app. The browser stores the uploaded player pool, draft settings,
+and pick history in local storage. The Flask server only validates uploads and
+recomputes snapshots from the browser-supplied state.
+
+Register it in your existing Flask app:
+
+```python
+from draft_optimizer.web import create_blueprint
+
+app.register_blueprint(create_blueprint(), url_prefix="/baseball-draft")
+```
+
+The blueprint exposes:
+
+- `GET /baseball-draft/`
+- `POST /baseball-draft/api/upload`
+- `POST /baseball-draft/api/snapshot`
+- `POST /baseball-draft/api/action`
+
+The web UI includes:
+
+- browser CSV upload
+- local persistence across refreshes
+- recommendation refresh, mine/other picks, undo, and auto-run controls
+- restart draft and full reset buttons
 
 ## CLI Commands
 
