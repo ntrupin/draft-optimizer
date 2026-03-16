@@ -142,6 +142,7 @@ summary {
   display: grid;
   gap: 1rem;
   grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.95fr);
+  align-items: start;
 }
 
 .panel {
@@ -474,7 +475,8 @@ summary {
 }
 
 .rail-panel {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.9rem;
 }
 

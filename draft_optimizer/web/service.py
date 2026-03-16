@@ -9,7 +9,7 @@ from ..optimizer import DraftOptimizer, Recommendation
 DEFAULT_SETTINGS: Dict[str, Any] = {
     "teams": 12,
     "draft_slot": 1,
-    "top_n": 12,
+    "top_n": 10,
     "disable_mc": False,
     "mc_trials": 220,
     "mc_seed": 17,
