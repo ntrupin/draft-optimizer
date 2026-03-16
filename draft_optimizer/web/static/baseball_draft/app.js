@@ -11,6 +11,7 @@
   };
   const storageKey = root.dataset.storageKey;
   const defaultSettings = JSON.parse(root.dataset.defaultSettings || "{}");
+  const validRailTabs = new Set(["search", "picks", "history"]);
 
   const elements = {
     actionPanel: document.getElementById("action-panel"),
@@ -33,6 +34,14 @@
     searchQuery: document.getElementById("search-query"),
     searchResultsBody: document.getElementById("search-results-body"),
     settingsForm: document.getElementById("settings-form"),
+    snakeNextPick: document.getElementById("snake-next-pick"),
+    snakeOnClock: document.getElementById("snake-on-clock"),
+    snakeRound: document.getElementById("snake-round"),
+    snakeTrackCurrent: document.getElementById("snake-track-current"),
+    snakeTrackNext: document.getElementById("snake-track-next"),
+    snakeYourTeam: document.getElementById("snake-your-team"),
+    railPanels: Array.from(document.querySelectorAll("[data-rail-panel]")),
+    railTabs: Array.from(document.querySelectorAll("[data-rail-tab]")),
     sourceLabel: document.getElementById("source-label"),
     statusBanner: document.getElementById("status-banner"),
     summaryCards: document.getElementById("summary-cards"),
@@ -48,6 +57,7 @@
 
   function defaultState() {
     return {
+      activeRailTab: "search",
       players: [],
       history: [],
       settings: { ...defaultSettings },
@@ -64,6 +74,7 @@
       }
       const parsed = JSON.parse(raw);
       return {
+        activeRailTab: typeof parsed.activeRailTab === "string" ? parsed.activeRailTab : "search",
         players: Array.isArray(parsed.players) ? parsed.players : [],
         history: Array.isArray(parsed.history) ? parsed.history : [],
         settings: { ...defaultSettings, ...(parsed.settings || {}) },
@@ -218,11 +229,128 @@
     return new Set(snapshot && Array.isArray(snapshot.drafted_ids) ? snapshot.drafted_ids : []);
   }
 
+  function activeRailTab() {
+    return validRailTabs.has(state.activeRailTab) ? state.activeRailTab : "search";
+  }
+
+  function setActiveRailTab(tabName) {
+    if (!validRailTabs.has(tabName)) {
+      return;
+    }
+    state.activeRailTab = tabName;
+    saveState();
+    renderRailTabs();
+  }
+
   function availablePlayers() {
     const draftedIds = currentDraftedIds();
     return state.players
       .filter((player) => !draftedIds.has(player.player_id))
       .sort((left, right) => right.projected_points - left.projected_points);
+  }
+
+  function nextMyPick(summary) {
+    const picks = Array.isArray(summary.my_pick_numbers) ? summary.my_pick_numbers : [];
+    return picks.find((pickNumber) => pickNumber > summary.current_pick_number) || null;
+  }
+
+  function renderRailTabs() {
+    const activeTab = activeRailTab();
+    elements.railTabs.forEach((button) => {
+      const isActive = button.dataset.railTab === activeTab;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+    elements.railPanels.forEach((panel) => {
+      panel.hidden = panel.dataset.railPanel !== activeTab;
+    });
+  }
+
+  function roundOrderFor(roundNumber, teams) {
+    return roundNumber % 2 === 1
+      ? Array.from({ length: teams }, (_value, index) => index + 1)
+      : Array.from({ length: teams }, (_value, index) => teams - index);
+  }
+
+  function snakeTrackMarkup({
+    roundOrder,
+    myTeam,
+    currentIndex = -1,
+    currentTeam = null,
+    nextPickTeam = null,
+  }) {
+    return roundOrder
+      .map((team, index) => {
+        const classes = ["snake-node"];
+        if (team === myTeam) {
+          classes.push("is-mine");
+        }
+        if (currentIndex >= 0 && index < currentIndex) {
+          classes.push("is-past");
+        }
+        if (currentIndex >= 0 && index === currentIndex) {
+          classes.push("is-current");
+        }
+        if (nextPickTeam !== null && team === nextPickTeam) {
+          classes.push("is-next");
+        }
+        if (currentTeam !== null && team === currentTeam && currentIndex < 0) {
+          classes.push("is-current");
+        }
+        return `
+          <div class="${classes.join(" ")}" aria-label="Team ${team}">
+            <span>T${team}</span>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  function renderSnakeTracker(summary) {
+    const teams = Number(snapshot.settings.teams);
+    const myTeam = Number(snapshot.settings.draft_slot);
+    const totalDraftPicks = teams * summary.total_roster_size;
+    const draftComplete = summary.current_pick_number >= totalDraftPicks;
+    const onClockPick = draftComplete ? totalDraftPicks : summary.current_pick_number + 1;
+    const roundNumber = Math.max(1, Math.floor((Math.max(onClockPick, 1) - 1) / teams) + 1);
+    const roundOrder = roundOrderFor(roundNumber, teams);
+    const currentIndex = draftComplete ? -1 : (onClockPick - 1) % teams;
+    const currentTeam = draftComplete ? null : roundOrder[currentIndex];
+    const upcomingMyPick = nextMyPick(summary);
+    const upcomingMyPickRound = upcomingMyPick === null
+      ? null
+      : Math.floor((upcomingMyPick - 1) / teams) + 1;
+    const nextRoundNumber = roundNumber + 1;
+    const hasNextRound = nextRoundNumber <= summary.total_roster_size;
+    const nextRoundOrder = hasNextRound ? roundOrderFor(nextRoundNumber, teams) : [];
+    const currentRoundNextPickTeam =
+      upcomingMyPickRound === roundNumber && !summary.my_turn ? myTeam : null;
+    const nextRoundNextPickTeam = upcomingMyPickRound === nextRoundNumber ? myTeam : null;
+
+    elements.snakeRound.textContent = `Round ${roundNumber}`;
+    elements.snakeOnClock.textContent = draftComplete ? "Complete" : `Team ${currentTeam}`;
+    elements.snakeYourTeam.textContent = `Team ${myTeam}`;
+    elements.snakeNextPick.textContent = summary.my_turn
+      ? "Now"
+      : upcomingMyPick === null
+        ? "Done"
+        : `#${upcomingMyPick}`;
+
+    elements.snakeTrackCurrent.innerHTML = snakeTrackMarkup({
+      roundOrder,
+      myTeam,
+      currentIndex,
+      nextPickTeam: currentRoundNextPickTeam,
+    });
+
+    elements.snakeTrackNext.parentElement.hidden = !hasNextRound;
+    elements.snakeTrackNext.innerHTML = hasNextRound
+      ? snakeTrackMarkup({
+          roundOrder: nextRoundOrder,
+          myTeam,
+          nextPickTeam: nextRoundNextPickTeam,
+        })
+      : "";
   }
 
   function actionButtons(playerId) {
@@ -236,12 +364,24 @@
 
   function renderSummary() {
     if (!snapshot) {
+      elements.snakeRound.textContent = "-";
+      elements.snakeOnClock.textContent = "-";
+      elements.snakeYourTeam.textContent = "-";
+      elements.snakeNextPick.textContent = "-";
+      elements.snakeTrackCurrent.innerHTML = "";
+      elements.snakeTrackNext.innerHTML = "";
+      elements.snakeTrackNext.parentElement.hidden = false;
       elements.summaryCards.innerHTML = "";
       elements.needsSummary.textContent = "";
       return;
     }
 
     const summary = snapshot.summary;
+    const upcomingMyPick = nextMyPick(summary);
+    const totalDraftPicks = Number(snapshot.settings.teams) * summary.total_roster_size;
+    const onClockLabel = summary.current_pick_number >= totalDraftPicks
+      ? "Complete"
+      : `#${summary.current_pick_number + 1}`;
     const needs = summary.active_needs || {};
     const needsText = Object.keys(needs).length
       ? `Needs: ${Object.entries(needs)
@@ -252,12 +392,13 @@
       ? "Your turn now."
       : `Picks until your next turn: ${summary.picks_until_my_next_turn_after_current}.`;
     elements.needsSummary.textContent = `${turnText} ${needsText}`;
+    renderSnakeTracker(summary);
 
     const cards = [
-      ["Overall Pick", summary.current_pick_number],
+      ["On Clock", onClockLabel],
       ["My Picks", `${summary.my_picks_count}/${summary.total_roster_size}`],
       ["Available", summary.available_count],
-      ["Next Turn Gap", summary.picks_until_my_next_turn_after_current],
+      ["Next My Pick", summary.my_turn ? "Now" : upcomingMyPick === null ? "Done" : `#${upcomingMyPick}`],
     ];
     elements.summaryCards.innerHTML = cards
       .map(
@@ -404,6 +545,7 @@
 
   function render() {
     applySettingsToForm(state.settings);
+    renderRailTabs();
     elements.sourceLabel.textContent = state.sourceName || "No CSV loaded";
     const hasPlayers = state.players.length > 0;
     elements.actionPanel.hidden = !hasPlayers;
@@ -416,6 +558,13 @@
       elements.searchResultsBody.innerHTML = "";
       elements.myPicksList.innerHTML = "";
       elements.historyList.innerHTML = "";
+      elements.snakeRound.textContent = "-";
+      elements.snakeOnClock.textContent = "-";
+      elements.snakeYourTeam.textContent = "-";
+      elements.snakeNextPick.textContent = "-";
+      elements.snakeTrackCurrent.innerHTML = "";
+      elements.snakeTrackNext.innerHTML = "";
+      elements.snakeTrackNext.parentElement.hidden = false;
       elements.summaryCards.innerHTML = "";
       elements.needsSummary.textContent = "";
       return;
@@ -551,6 +700,12 @@
   elements.teamsInput.addEventListener("input", syncDraftSlotBounds);
 
   root.addEventListener("click", async (event) => {
+    const railTab = event.target.closest("[data-rail-tab]");
+    if (railTab) {
+      setActiveRailTab(railTab.dataset.railTab);
+      return;
+    }
+
     const button = event.target.closest("[data-action-type]");
     if (!button) {
       return;

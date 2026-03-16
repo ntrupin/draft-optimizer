@@ -337,6 +337,95 @@ summary {
   margin: 0.9rem 0 0;
 }
 
+.snake-shell {
+  margin-bottom: 1rem;
+  padding: 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 250, 241, 0.74);
+}
+
+.snake-meta {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 0.85rem;
+}
+
+.snake-meta-item span {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.snake-meta-item strong {
+  font-size: 1rem;
+}
+
+.snake-track {
+  display: flex;
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+}
+
+.snake-rows {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.snake-row {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.snake-row-label {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.snake-node {
+  min-width: 3.3rem;
+  padding: 0.72rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-strong);
+  text-align: center;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.snake-node.is-past {
+  opacity: 0.48;
+}
+
+.snake-node.is-mine {
+  border-color: rgba(13, 107, 87, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(13, 107, 87, 0.18);
+  color: var(--accent-strong);
+}
+
+.snake-node.is-next {
+  box-shadow: inset 0 0 0 2px rgba(166, 69, 43, 0.22);
+}
+
+.snake-node.is-current {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #f8f3ea;
+}
+
+.snake-node.is-current.is-mine {
+  box-shadow: inset 0 0 0 2px rgba(248, 243, 234, 0.4);
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -378,6 +467,39 @@ summary {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+}
+
+.rail-panel {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.rail-tabs {
+  display: flex;
+  gap: 0.55rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.rail-tab {
+  cursor: pointer;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.rail-tab.is-active {
+  border-color: rgba(13, 107, 87, 0.22);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.rail-view {
+  display: grid;
+  gap: 0.9rem;
 }
 
 .player-list,
@@ -453,6 +575,10 @@ summary {
   .summary-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .snake-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -466,7 +592,8 @@ summary {
   }
 
   .settings-grid,
-  .summary-cards {
+  .summary-cards,
+  .snake-meta {
     grid-template-columns: 1fr;
   }
 
@@ -483,5 +610,9 @@ summary {
 
   .source-chip {
     min-width: 0;
+  }
+
+  .rail-tabs {
+    flex-wrap: wrap;
   }
 }

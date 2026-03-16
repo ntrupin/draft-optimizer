@@ -169,6 +169,36 @@
                   <h2>Draft Snapshot</h2>
                 </div>
               </div>
+              <section class="snake-shell" aria-label="Draft order tracker">
+                <div class="snake-meta">
+                  <article class="snake-meta-item">
+                    <span>Round</span>
+                    <strong id="snake-round">-</strong>
+                  </article>
+                  <article class="snake-meta-item">
+                    <span>On Clock</span>
+                    <strong id="snake-on-clock">-</strong>
+                  </article>
+                  <article class="snake-meta-item">
+                    <span>Your Team</span>
+                    <strong id="snake-your-team">-</strong>
+                  </article>
+                  <article class="snake-meta-item">
+                    <span>Next Pick</span>
+                    <strong id="snake-next-pick">-</strong>
+                  </article>
+                </div>
+                <div class="snake-rows">
+                  <div class="snake-row">
+                    <span class="snake-row-label">Current</span>
+                    <div id="snake-track-current" class="snake-track"></div>
+                  </div>
+                  <div class="snake-row">
+                    <span class="snake-row-label">Next</span>
+                    <div id="snake-track-next" class="snake-track"></div>
+                  </div>
+                </div>
+              </section>
               <div id="summary-cards" class="summary-cards"></div>
               <p id="needs-summary" class="summary-line">No active needs yet</p>
             </section>
@@ -198,8 +228,14 @@
                 </div>
               </section>
 
-              <section class="stack">
-                <section class="panel search-panel">
+              <section class="panel rail-panel">
+                <div class="rail-tabs" role="tablist" aria-label="Draft side panels">
+                  <button class="rail-tab" data-rail-tab="search" role="tab" type="button">Search</button>
+                  <button class="rail-tab" data-rail-tab="picks" role="tab" type="button">My Picks</button>
+                  <button class="rail-tab" data-rail-tab="history" role="tab" type="button">History</button>
+                </div>
+
+                <section class="rail-view" data-rail-panel="search">
                   <div class="panel-heading">
                     <div>
                       <p class="panel-kicker">Search</p>
@@ -226,7 +262,7 @@
                   </div>
                 </section>
 
-                <section class="panel roster-panel">
+                <section class="rail-view" data-rail-panel="picks" hidden>
                   <div class="panel-heading">
                     <div>
                       <p class="panel-kicker">My Team</p>
@@ -237,7 +273,7 @@
                   <ul id="my-picks-list" class="player-list"></ul>
                 </section>
 
-                <section class="panel history-panel">
+                <section class="rail-view" data-rail-panel="history" hidden>
                   <div class="panel-heading">
                     <div>
                       <p class="panel-kicker">Recent Activity</p>
