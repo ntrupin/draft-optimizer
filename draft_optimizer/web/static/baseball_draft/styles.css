@@ -480,6 +480,7 @@ summary {
 
 .rail-tabs {
   display: flex;
+  align-items: flex-start;
   gap: 0.55rem;
   padding-bottom: 0.15rem;
   border-bottom: 1px solid var(--line);
@@ -487,12 +488,14 @@ summary {
 
 .rail-tab {
   cursor: pointer;
+  flex: 0 0 auto;
   padding: 0.55rem 0.8rem;
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
   color: var(--muted);
   font-weight: 700;
+  line-height: 1.1;
 }
 
 .rail-tab.is-active {
